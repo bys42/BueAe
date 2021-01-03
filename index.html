@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    body {
+        background-color: black;
+        color: darkcyan;
+    }
+</style>
+
+<body>
+    <audio id="bgm" src="">
+    </audio>
+    <script>
+        class SFX {
+            constructor(src) {
+                var sfx = document.createElement("audio");
+                sfx.src = src;
+                sfx.oncanplay = () => sfx.play();
+                sfx.onended = () => document.body.removeChild(sfx);
+                document.body.appendChild(sfx);
+            }
+        }
+
+        const sfxKeyMap = {
+            "1": { title: "yeah", src: "sfx/yeah_1.mp3" },
+            "2": { title: "applause", src: "sfx/applause.webm" },
+            "3": { title: "drum", src: "sfx/Drum Roll.webm" },
+            "4": { title: "binbon", src: "sfx/binbon.mp3" },
+        };
+
+        Object.keys(sfxKeyMap).forEach(key => {
+            var div = document.createElement("div");
+            div.innerHTML = `${key}: ${sfxKeyMap[key].title}`
+            document.body.appendChild(div);
+        })
+
+        document.body.onkeyup = e => {
+            if (!e.key in sfxKeyMap) return;
+            new SFX(sfxKeyMap[e.key].src);
+        }
+
+    </script>
+</body>
+
+</html>
