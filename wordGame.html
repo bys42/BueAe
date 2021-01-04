@@ -8,6 +8,7 @@
     <style type="text/css">
         html,
         body {
+            margin: 0px;
             background-color: black;
             height: 100%;
             width: 100%;
@@ -24,7 +25,7 @@
             padding: 0;
             text-align: center;
             color: #AAA;
-            font: 200px monospace, serif;
+            font: 250px monospace, serif;
             user-select: none;
         }
 
@@ -60,7 +61,7 @@
 
 <body>
     <div class="countdown" id="countdown"></div>
-    <div class="score" id="score">SCORE:00</div>
+    <div class="score" id="score">得分:00</div>
     <div class="ans" id="ans"></div>
     <script>
         class Sound {
@@ -76,32 +77,54 @@
                     this.audio.currentTime = 0
                 }
             }
+            set volume(val) {
+                if (0 <= val && val <= 1) {
+                    this.audio.volume = val;
+                }
+            }
+            get volume() {
+                return this.audio.volume;
+            }
         }
 
         const TIME_MAX = 120;
+
         const countDownElt = document.getElementById("countdown");
         const scoreElt = document.getElementById("score");
         const ansElt = document.getElementById("ans");
-        const bgm = new Sound("sfx/bgm.mp3");
-        const binbonSfx = new Sound("sfx/binbon.mp3");
-        const batuSfx = new Sound("sfx/binbon.mp3");
-        const stopWhistle = new Sound("sfx/Whistle_long.mp3");
 
-        function shuffle(array) {
-            var cur = array.length, tmp, rnd;
-            while (0 !== cur) {
-                rnd = (Math.random() * cur--) | 0;
-                tmp = array[cur];
-                array[cur] = array[rnd];
-                array[rnd] = tmp;
+        const binbonSfx = new Sound("sfx/binbon.mp3");
+        const batsuSfx = new Sound("sfx/batsu.mp3");
+        const whistleSfx = new Sound("sfx/Whistle_long.mp3");
+        const bgm = new Sound("sfx/wordGameBgm.mp3");
+        bgm.volume = 0.5;
+
+        const arr = getWordArray(
+            "abcdefg"
+        );
+
+        function getWordArray(seqStr) {
+            const saveData = localStorage.getItem("WordGameSeq");
+            if (saveData) {
+                return JSON.parse(saveData);
             }
-            return array;
+            const wordArr = shuffle(seqStr.split(""));
+            localStorage.setItem("WordGameSeq", JSON.stringify(wordArr));
+            return wordArr;
+
+            function shuffle(array) {
+                let cur = array.length, tmp, rnd;
+                while (0 !== cur) {
+                    rnd = (Math.random() * cur--) | 0;
+                    tmp = array[cur];
+                    array[cur] = array[rnd];
+                    array[rnd] = tmp;
+                }
+                return array;
+            }
         }
-        const s = "qwertyuiopasdfghjklzxcvbnm1234567890一二三四五六七八九十百千萬";
-        const arr = s.split("");
-        shuffle(arr);
-        // todo: save sequence, check store, save current index;
-        // console.log(arr);
+
+        // todo: save current index;
 
         let curId = 0;
         let startTime = TIME_MAX;
@@ -115,6 +138,8 @@
         }
 
         function onGameProcessingKeyEvent(e) {
+            e.preventDefault();
+
             switch (e.key) {
                 case "z": // correct
                     next(true);
@@ -122,11 +147,18 @@
                 case "p": // pass
                     if (passCount > 0) {
                         passCount--;
+                        batsuSfx.play();
                         next(false);
                     }
                     break;
                 case "s": // skip, just in case.
                     next(false);
+                    break;
+                case "ArrowDown":
+                    bgm.volume -= 0.05;
+                    break;
+                case "ArrowUp":
+                    bgm.volume += 0.05;
                     break;
             }
         }
@@ -137,15 +169,17 @@
             score = 0;
             startTime = TIME_MAX;
             countDownElt.innerText = secondsToFormatTime(startTime);
+            countDownElt.style.color = "#AAA";
             var countDownEvent = setInterval(() => {
                 countDownElt.innerText = secondsToFormatTime(--startTime);
+                if (startTime <= 10) countDownElt.style.color = "#A00";
                 if (startTime <= 0) stopGame();
             }, 1000);
             document.body.onkeyup = onGameProcessingKeyEvent;
 
             function stopGame() {
                 clearInterval(countDownEvent);
-                stopWhistle.play();
+                whistleSfx.play();
                 document.body.onkeyup = onGameEndKeyEvent;
             }
         }
@@ -155,7 +189,7 @@
             ansElt.innerText = arr[curId++];
             if (isCorrect) {
                 binbonSfx.play();
-                scoreElt.innerText = "SCORE:" + padZero(++score, 2);
+                scoreElt.innerText = "得分:" + padZero(++score, 2);
             }
         }
 
