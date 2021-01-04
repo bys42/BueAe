@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        html,
+        body {
+            background-color: black;
+            height: 100%;
+            width: 100%;
+        }
+
+        .ans {
+            display: block;
+            position: absolute;
+            z-index: 999;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: #AAA;
+            font: 200px monospace, serif;
+            user-select: none;
+        }
+
+        .countdown {
+            display: block;
+            position: absolute;
+            z-index: 999;
+            top: 10%;
+            left: 10%;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: #AAA;
+            font: small-caps 42px monospace, serif;
+            user-select: none;
+        }
+
+        .score {
+            display: block;
+            position: absolute;
+            z-index: 999;
+            top: 10%;
+            right: 10%;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: #AAA;
+            font: small-caps 42px monospace, serif;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="countdown" id="countdown"></div>
+    <div class="score" id="score">SCORE:00</div>
+    <div class="ans" id="ans"></div>
+    <script>
+        class Sound {
+            constructor(src) {
+                this.audio = document.createElement("audio");
+                this.audio.src = src;
+                document.body.appendChild(this.audio);
+            }
+            play() {
+                if (this.audio.paused) {
+                    this.audio.play();
+                } else {
+                    this.audio.currentTime = 0
+                }
+            }
+        }
+
+        const TIME_MAX = 120;
+        const countDownElt = document.getElementById("countdown");
+        const scoreElt = document.getElementById("score");
+        const ansElt = document.getElementById("ans");
+        const bgm = new Sound("sfx/bgm.mp3");
+        const binbonSfx = new Sound("sfx/binbon.mp3");
+        const batuSfx = new Sound("sfx/binbon.mp3");
+        const stopWhistle = new Sound("sfx/Whistle_long.mp3");
+
+        function shuffle(array) {
+            var cur = array.length, tmp, rnd;
+            while (0 !== cur) {
+                rnd = (Math.random() * cur--) | 0;
+                tmp = array[cur];
+                array[cur] = array[rnd];
+                array[rnd] = tmp;
+            }
+            return array;
+        }
+        const s = "qwertyuiopasdfghjklzxcvbnm1234567890一二三四五六七八九十百千萬";
+        const arr = s.split("");
+        shuffle(arr);
+        // todo: save sequence, check store, save current index;
+        // console.log(arr);
+
+        let curId = 0;
+        let startTime = TIME_MAX;
+        let score = 0;
+        let passCount = 2;
+        countDownElt.innerText = secondsToFormatTime(startTime);
+        document.body.onkeyup = onGameEndKeyEvent;
+
+        function onGameEndKeyEvent(e) {
+            if (e.key == "s") startGame();
+        }
+
+        function onGameProcessingKeyEvent(e) {
+            switch (e.key) {
+                case "z": // correct
+                    next(true);
+                    break;
+                case "p": // pass
+                    if (passCount > 0) {
+                        passCount--;
+                        next(false);
+                    }
+                    break;
+                case "s": // skip, just in case.
+                    next(false);
+                    break;
+            }
+        }
+
+        function startGame() {
+            bgm.play();
+            next(false);
+            score = 0;
+            startTime = TIME_MAX;
+            countDownElt.innerText = secondsToFormatTime(startTime);
+            var countDownEvent = setInterval(() => {
+                countDownElt.innerText = secondsToFormatTime(--startTime);
+                if (startTime <= 0) stopGame();
+            }, 1000);
+            document.body.onkeyup = onGameProcessingKeyEvent;
+
+            function stopGame() {
+                clearInterval(countDownEvent);
+                stopWhistle.play();
+                document.body.onkeyup = onGameEndKeyEvent;
+            }
+        }
+
+        function next(isCorrect) {
+            if (curId >= arr.length) return;
+            ansElt.innerText = arr[curId++];
+            if (isCorrect) {
+                binbonSfx.play();
+                scoreElt.innerText = "SCORE:" + padZero(++score, 2);
+            }
+        }
+
+        function padZero(str, length) {
+            while (String(str).length < length) {
+                str = "0" + str;
+            }
+            return str;
+        }
+        function secondsToFormatTime(time) {
+            var sec = time | 0;
+            var min = (sec / 60) | 0;
+            sec = sec - min * 60;
+            return padZero(min, 2) + ":" + padZero(sec, 2);
+        }
+    </script>
+</body>
+
+</html>
