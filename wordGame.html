@@ -23,11 +23,16 @@
             user-select: none;
         }
 
-        .countdown {
+        .timerContainer {
             position: absolute;
             z-index: 999;
             top: 10%;
             left: 10%;
+            font: bold 42px monospace, serif;
+            user-select: none;
+        }
+
+        .timer {
             color: #555;
             font: bold 42px monospace, serif;
             user-select: none;
@@ -92,11 +97,12 @@
 </head>
 
 <body>
-    <div class="countdown" id="countdown"></div>
-    <div class="score" id="score">得分:00</div>
+    <div id="timerContainer" class="timerContainer"></div>
+    <div class="score" id="score">score:00</div>
     <div class="ans" id="ans"></div>
     <div id="itemContainer" class="itemContainer">
     </div>
+
     <script>
         class Sound {
             constructor(src) {
@@ -104,6 +110,9 @@
                 this.audio.src = src;
                 document.body.appendChild(this.audio);
             }
+            // pause() {
+            //     this.audio.pause();
+            // }
             play() {
                 if (this.audio.paused) {
                     this.audio.play();
@@ -144,25 +153,16 @@
 
         }
         class Timer {
-            constructor(timeStart) {
-                this.timeoutSfx = new Sound("sfx/Whistle_long.mp3");
-                this.element = document.getElementById("countdown");
+            constructor(timeStart, container) {
+                this.element = document.createElement("div");
+                this.element.classList.add("timer");
+                container.appendChild(this.element);
                 this.time = timeStart;
-                this._show(timeStart);
-            }
-            _show(time) {
-                this.element.innerText = secondsToFormatTime(time);
-
-                function secondsToFormatTime(time) {
-                    var sec = time | 0;
-                    var min = (sec / 60) | 0;
-                    sec = sec - min * 60;
-                    return padZero(min, 2) + ":" + padZero(sec, 2);
-                }
+                this.timeoutSfx = new Sound("sfx/Whistle_long.mp3");
             }
             start() {
                 this.event = setInterval(() => {
-                    this._show(--this.time);
+                    this.time--;
                     if (this.time == 10) {
                         this.element.classList.add("urgen");
                     } else if (this.time <= 0) {
@@ -173,15 +173,30 @@
                 }, 1000);
             }
             set onTimeout(callback) {
-                this._onTimeoutCb = callback;
+                if (typeof callback == "function")
+                    this._onTimeoutCb = callback;
+            }
+            set time(newtime) {
+                this._currentTime = newtime;
+                this.element.innerText = secondsToFormatTime(newtime);
+
+                function secondsToFormatTime(time) {
+                    var sec = time | 0;
+                    var min = (sec / 60) | 0;
+                    sec = sec - min * 60;
+                    return padZero(min, 2) + ":" + padZero(sec, 2);
+                }
+            }
+            get time() {
+                return this._currentTime;
             }
         }
 
-        const TIME_MAX = 13;
+        const TIME_MAX = 12;
         const SKIP_MAX = 2;
 
-        const timer = new Timer(TIME_MAX);
         const skipItem = new SkipItem(SKIP_MAX, document.getElementById("itemContainer"));
+        const timer = new Timer(TIME_MAX, document.getElementById("timerContainer"));
         const scoreElt = document.getElementById("score");
         const ansElt = document.getElementById("ans");
 
@@ -190,10 +205,63 @@
         bgm.volume = 0.7;
 
         const arr = getWordArray(
-            "qwertyuiop[]"
-            + "asdfghjkl;'"
-            + "zxcvbnm,./"
+            "qwertyuiop[]asdfghjkl;'zxcvbnm,./"
         );
+
+        let curId = localStorage.getItem("cur") || 0;
+        let score = 0;
+
+        document.body.onkeyup = onGameIdleKeyEvent;
+
+        function onGameIdleKeyEvent(e) {
+            if (e.key == "s") startGame();
+        }
+
+        function startGame() {
+            bgm.play();
+            timer.start();
+            timer.onTimeout = stopGame;
+            next(false);
+            document.body.onkeyup = onGameProcessingKeyEvent;
+        }
+
+        function onGameProcessingKeyEvent(e) {
+            switch (e.key) {
+                case "z": // correct
+                    next(true);
+                    break;
+                case "p": // pass
+                    if (skipItem.use()) {
+                        next(false);
+                    }
+                    break;
+                // case "s": // skip, just in case.
+                //     next(false);
+                //     break;
+                case "ArrowDown":
+                    bgm.volume -= 0.05;
+                    break;
+                case "ArrowUp":
+                    bgm.volume += 0.05;
+                    break;
+            }
+        }
+
+
+        function stopGame() {
+            // bgm.pause();
+            document.body.onkeyup = null;
+        }
+
+        function next(isCorrect) {
+            if (curId >= arr.length) return;
+            ansElt.innerText = arr[curId++];
+            localStorage.setItem("cur", curId);
+            if (isCorrect) {
+                binbonSfx.play();
+                scoreElt.innerText = "score:" + padZero(++score, 2);
+            }
+        }
 
         function getWordArray(seqStr) {
             const saveData = localStorage.getItem("WordGameSeq");
@@ -213,64 +281,6 @@
                     array[rnd] = tmp;
                 }
                 return array;
-            }
-        }
-
-        let curId = localStorage.getItem("cur") || 0;
-        let score = 0;
-
-        document.body.onkeyup = onGameIdleKeyEvent;
-
-        function onGameIdleKeyEvent(e) {
-            if (e.key == "s") startGame();
-        }
-
-        function onGameProcessingKeyEvent(e) {
-            e.preventDefault();
-
-            switch (e.key) {
-                case "z": // correct
-                    next(true);
-                    break;
-                case "p": // pass
-                    if (skipItem.use()) {
-                        next(false);
-                    }
-                    break;
-                case "s": // skip, just in case.
-                    next(false);
-                    break;
-                case "ArrowDown":
-                    bgm.volume -= 0.05;
-                    break;
-                case "ArrowUp":
-                    bgm.volume += 0.05;
-                    break;
-            }
-        }
-
-        function startGame() {
-            bgm.play();
-            next(false);
-            score = 0;
-
-            timer.onTimeout = stopGame;
-            timer.start();
-
-            document.body.onkeyup = onGameProcessingKeyEvent;
-
-            function stopGame() {
-                document.body.onkeyup = null;
-            }
-        }
-
-        function next(isCorrect) {
-            if (curId >= arr.length) return;
-            ansElt.innerText = arr[curId++];
-            localStorage.setItem("cur", curId);
-            if (isCorrect) {
-                binbonSfx.play();
-                scoreElt.innerText = "得分:" + padZero(++score, 2);
             }
         }
 
