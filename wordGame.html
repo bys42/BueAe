@@ -6,55 +6,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style type="text/css">
-        html,
         body {
             margin: 0px;
-            background-color: black;
             height: 100%;
             width: 100%;
         }
 
         .ans {
-            display: block;
             position: absolute;
             z-index: 999;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            color: #AAA;
+            color: #555;
             font: 250px monospace, serif;
             user-select: none;
         }
 
         .countdown {
-            display: block;
             position: absolute;
             z-index: 999;
             top: 10%;
             left: 10%;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            color: #AAA;
-            font: small-caps 42px monospace, serif;
+            color: #555;
+            font: bold 42px monospace, serif;
             user-select: none;
         }
 
         .score {
-            display: block;
             position: absolute;
             z-index: 999;
             top: 10%;
             right: 10%;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            color: #AAA;
-            font: small-caps 42px monospace, serif;
+            color: #555;
+            font: bold 42px monospace, serif;
             user-select: none;
+        }
+
+        @keyframes scaleChange {
+            0% {
+                transform: scale(1);
+            }
+
+            33% {
+                transform: scale(1.25);
+            }
+        }
+
+        .urgen {
+            color: #A00;
+            animation-name: scaleChange;
+            /* animation-timing-function: ease-in-out; */
+            animation-iteration-count: 11;
+            animation-duration: 1s;
+        }
+
+        .itemContainer {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+            align-items: center;
+            position: absolute;
+            width: 20%;
+            height: 10%;
+            bottom: 10%;
+            right: 7%;
+        }
+
+        .item {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 33%;
+            height: 100%;
+        }
+
+        .passIcon {
+            background-image: url("image/pass.png");
+        }
+
+        .passUsedIcon {
+            background-image: url("image/passUsed.png");
         }
     </style>
 </head>
@@ -63,6 +95,8 @@
     <div class="countdown" id="countdown"></div>
     <div class="score" id="score">得分:00</div>
     <div class="ans" id="ans"></div>
+    <div id="itemContainer" class="itemContainer">
+    </div>
     <script>
         class Sound {
             constructor(src) {
@@ -86,21 +120,79 @@
                 return this.audio.volume;
             }
         }
+        class SkipItem {
+            constructor(count, container) {
+                this.sfx = new Sound("sfx/batsu.mp3");
+                this.items = [];
+                this.useCount = 0;
+                for (let i = 0; i < count; i++) {
+                    let item = document.createElement("div");
+                    item.classList.add("passIcon");
+                    item.classList.add("item");
+                    container.appendChild(item);
+                    this.items.push(item);
+                }
+            }
+            use() {
+                if (this.useCount >= this.items.length) return false;
+                this.sfx.play();
+                this.items[this.useCount].classList.remove("passIcon");
+                this.items[this.useCount].classList.add("passUsedIcon");
+                this.useCount++;
+                return true;
+            }
 
-        const TIME_MAX = 120;
+        }
+        class Timer {
+            constructor(timeStart) {
+                this.timeoutSfx = new Sound("sfx/Whistle_long.mp3");
+                this.element = document.getElementById("countdown");
+                this.time = timeStart;
+                this._show(timeStart);
+            }
+            _show(time) {
+                this.element.innerText = secondsToFormatTime(time);
 
-        const countDownElt = document.getElementById("countdown");
+                function secondsToFormatTime(time) {
+                    var sec = time | 0;
+                    var min = (sec / 60) | 0;
+                    sec = sec - min * 60;
+                    return padZero(min, 2) + ":" + padZero(sec, 2);
+                }
+            }
+            start() {
+                this.event = setInterval(() => {
+                    this._show(--this.time);
+                    if (this.time == 10) {
+                        this.element.classList.add("urgen");
+                    } else if (this.time <= 0) {
+                        clearInterval(this.event);
+                        this.timeoutSfx.play();
+                        this._onTimeoutCb.apply();
+                    }
+                }, 1000);
+            }
+            set onTimeout(callback) {
+                this._onTimeoutCb = callback;
+            }
+        }
+
+        const TIME_MAX = 13;
+        const SKIP_MAX = 2;
+
+        const timer = new Timer(TIME_MAX);
+        const skipItem = new SkipItem(SKIP_MAX, document.getElementById("itemContainer"));
         const scoreElt = document.getElementById("score");
         const ansElt = document.getElementById("ans");
 
         const binbonSfx = new Sound("sfx/binbon.mp3");
-        const batsuSfx = new Sound("sfx/batsu.mp3");
-        const whistleSfx = new Sound("sfx/Whistle_long.mp3");
         const bgm = new Sound("sfx/wordGameBgm.mp3");
-        bgm.volume = 0.5;
+        bgm.volume = 0.7;
 
         const arr = getWordArray(
-            "abcdefg"
+            "qwertyuiop[]"
+            + "asdfghjkl;'"
+            + "zxcvbnm,./"
         );
 
         function getWordArray(seqStr) {
@@ -124,16 +216,12 @@
             }
         }
 
-        // todo: save current index;
-
-        let curId = 0;
-        let startTime = TIME_MAX;
+        let curId = localStorage.getItem("cur") || 0;
         let score = 0;
-        let passCount = 2;
-        countDownElt.innerText = secondsToFormatTime(startTime);
-        document.body.onkeyup = onGameEndKeyEvent;
 
-        function onGameEndKeyEvent(e) {
+        document.body.onkeyup = onGameIdleKeyEvent;
+
+        function onGameIdleKeyEvent(e) {
             if (e.key == "s") startGame();
         }
 
@@ -145,9 +233,7 @@
                     next(true);
                     break;
                 case "p": // pass
-                    if (passCount > 0) {
-                        passCount--;
-                        batsuSfx.play();
+                    if (skipItem.use()) {
                         next(false);
                     }
                     break;
@@ -167,26 +253,21 @@
             bgm.play();
             next(false);
             score = 0;
-            startTime = TIME_MAX;
-            countDownElt.innerText = secondsToFormatTime(startTime);
-            countDownElt.style.color = "#AAA";
-            var countDownEvent = setInterval(() => {
-                countDownElt.innerText = secondsToFormatTime(--startTime);
-                if (startTime <= 10) countDownElt.style.color = "#A00";
-                if (startTime <= 0) stopGame();
-            }, 1000);
+
+            timer.onTimeout = stopGame;
+            timer.start();
+
             document.body.onkeyup = onGameProcessingKeyEvent;
 
             function stopGame() {
-                clearInterval(countDownEvent);
-                whistleSfx.play();
-                document.body.onkeyup = onGameEndKeyEvent;
+                document.body.onkeyup = null;
             }
         }
 
         function next(isCorrect) {
             if (curId >= arr.length) return;
             ansElt.innerText = arr[curId++];
+            localStorage.setItem("cur", curId);
             if (isCorrect) {
                 binbonSfx.play();
                 scoreElt.innerText = "得分:" + padZero(++score, 2);
@@ -198,12 +279,6 @@
                 str = "0" + str;
             }
             return str;
-        }
-        function secondsToFormatTime(time) {
-            var sec = time | 0;
-            var min = (sec / 60) | 0;
-            sec = sec - min * 60;
-            return padZero(min, 2) + ":" + padZero(sec, 2);
         }
     </script>
 </body>
