@@ -8,8 +8,6 @@
     <style type="text/css">
         body {
             margin: 0px;
-            height: 100%;
-            width: 100%;
         }
 
         .ans {
@@ -19,7 +17,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: #555;
-            font: 250px monospace, serif;
+            font: 255px monospace, serif;
             user-select: none;
         }
 
@@ -28,13 +26,11 @@
             z-index: 999;
             top: 10%;
             left: 10%;
-            font: bold 42px monospace, serif;
-            user-select: none;
         }
 
         .timer {
             color: #555;
-            font: bold 42px monospace, serif;
+            font: bold 56px monospace, serif;
             user-select: none;
         }
 
@@ -44,7 +40,7 @@
             top: 10%;
             right: 10%;
             color: #555;
-            font: bold 42px monospace, serif;
+            font: bold 56px monospace, serif;
             user-select: none;
         }
 
@@ -72,10 +68,10 @@
             justify-content: space-evenly;
             align-items: center;
             position: absolute;
-            width: 20%;
-            height: 10%;
             bottom: 10%;
             right: 7%;
+            width: 20%;
+            height: 13%;
         }
 
         .item {
@@ -104,15 +100,18 @@
     </div>
 
     <script>
+        const TIME_MAX = 120;
+        const SKIP_MAX = 2;
+
         class Sound {
             constructor(src) {
                 this.audio = document.createElement("audio");
                 this.audio.src = src;
                 document.body.appendChild(this.audio);
             }
-            // pause() {
-            //     this.audio.pause();
-            // }
+            pause() {
+                this.audio.pause();
+            }
             play() {
                 if (this.audio.paused) {
                     this.audio.play();
@@ -150,7 +149,6 @@
                 this.useCount++;
                 return true;
             }
-
         }
         class Timer {
             constructor(timeStart, container) {
@@ -191,9 +189,6 @@
                 return this._currentTime;
             }
         }
-
-        const TIME_MAX = 12;
-        const SKIP_MAX = 2;
 
         const skipItem = new SkipItem(SKIP_MAX, document.getElementById("itemContainer"));
         const timer = new Timer(TIME_MAX, document.getElementById("timerContainer"));
