@@ -203,7 +203,7 @@
             "qwertyuiop[]asdfghjkl;'zxcvbnm,./"
         );
 
-        let curId = localStorage.getItem("cur") || 0;
+        let curId = +(localStorage.getItem("cur") || 0);
         let score = 0;
 
         document.body.onkeyup = onGameIdleKeyEvent;
@@ -241,7 +241,6 @@
                     break;
             }
         }
-
 
         function stopGame() {
             // bgm.pause();
