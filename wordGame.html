@@ -30,7 +30,7 @@
 
         .timer {
             color: #555;
-            font: bold 56px monospace, serif;
+            font: bold 100px monospace, serif;
             user-select: none;
         }
 
@@ -40,7 +40,7 @@
             top: 10%;
             right: 10%;
             color: #555;
-            font: bold 56px monospace, serif;
+            font: bold 78px monospace, serif;
             user-select: none;
         }
 
@@ -48,7 +48,6 @@
             0% {
                 transform: scale(1);
             }
-
             33% {
                 transform: scale(1.25);
             }
@@ -205,11 +204,22 @@
 
         let curId = +(localStorage.getItem("cur") || 0);
         let score = 0;
+        let isDebug = false;
 
         document.body.onkeyup = onGameIdleKeyEvent;
 
         function onGameIdleKeyEvent(e) {
-            if (e.key == "s") startGame();
+            switch (e.key) {
+                case "s":
+                    startGame();
+                    break;
+                case "d":
+                    isDebug = !isDebug;
+                    break;
+                case "q":
+                    if (isDebug) clearData();
+                    break;
+            }
         }
 
         function startGame() {
@@ -218,6 +228,12 @@
             timer.onTimeout = stopGame;
             next(false);
             document.body.onkeyup = onGameProcessingKeyEvent;
+        }
+
+        function clearData() {
+            localStorage.setItem("cur", 0);
+            localStorage.removeItem("WordGameSeq");
+            localStorage.removeItem("record");
         }
 
         function onGameProcessingKeyEvent(e) {
@@ -230,9 +246,12 @@
                         next(false);
                     }
                     break;
-                // case "s": // skip, just in case.
-                //     next(false);
-                //     break;
+                case "d":
+                    isDebug = !isDebug;
+                    break;
+                case "w":
+                    if (isDebug) next(false);
+                    break;
                 case "ArrowDown":
                     bgm.volume -= 0.05;
                     break;
@@ -245,6 +264,9 @@
         function stopGame() {
             // bgm.pause();
             document.body.onkeyup = null;
+            let record = localStorage.getItem("record") || "record:";
+            record = record + score + "/";
+            localStorage.setItem("record", record);
         }
 
         function next(isCorrect) {
