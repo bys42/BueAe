@@ -263,10 +263,18 @@
 
         function stopGame() {
             // bgm.pause();
-            document.body.onkeyup = null;
+            document.body.onkeyup = onGameStop;
             let record = localStorage.getItem("record") || "record:";
             record = record + score + "/";
             localStorage.setItem("record", record);
+        }
+
+        let lastChance = true;
+        function onGameStop(e) {
+            if (lastChance && e.key == "z") {
+                next(true);
+                lastChance = false;
+            }
         }
 
         function next(isCorrect) {
